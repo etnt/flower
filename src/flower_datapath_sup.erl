@@ -40,7 +40,9 @@ start_connection(TransportMod) ->
     supervisor:start_child(?MODULE, [TransportMod]).
 
 datapaths() ->
-    lists:map(fun({_, Child, _, _}) -> Child end, supervisor:which_children(?MODULE)).
+    lists:map(
+      fun({_, Child, _, _}) -> Child end,
+      supervisor:which_children(?MODULE)).
 
 %% ===================================================================
 %% Supervisor callbacks

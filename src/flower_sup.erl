@@ -54,10 +54,10 @@ stop_listener(TransportMod, Arguments) ->
 
 init([]) ->
     {ok, {{one_for_one, 5, 10}, [
-				 ?CHILD(flower_event, worker),
-				 ?CHILD(flower_dispatcher, worker),
-				 ?CHILD(flower_mac_learning, worker),
-				 ?CHILD(flower_component_sup, supervisor),
-				 ?CHILD(flower_datapath_sup, supervisor)
-				]} }.
+                                 ?CHILD(flower_event, worker),
+                                 ?CHILD(flower_dispatcher, worker),
+                                 ?CHILD(flower_mac_learning, worker),
+                                 ?CHILD(flower_component_sup, supervisor),
+                                 ?CHILD(flower_datapath_sup, supervisor)
+                                ]} }.
 

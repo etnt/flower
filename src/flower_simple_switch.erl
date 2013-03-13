@@ -34,9 +34,9 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
 -record(state, {}).
 
@@ -102,32 +102,42 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({{packet, in}, Sw, Msg}, State) ->
-    case Flow = (catch flower_flow:flow_extract(0, Msg#ofp_packet_in.in_port, Msg#ofp_packet_in.data)) of
-	#flow{} ->
-	    %% choose destination...
-	    Port = choose_destination(Flow),
-	    Actions = case Port of
-			  none -> [];
-			  %%						 X when is_integer(X) ->
-			  %%							 [#ofp_action_enqueue{port = X, queue_id = 0}];
-			  X ->
-			      [#ofp_action_output{port = X, max_len = 0}]
-		      end,
+    case Flow = (catch flower_flow:flow_extract(0, Msg#ofp_packet_in.in_port,
+                                                Msg#ofp_packet_in.data)) of
+        #flow{} ->
+            %% choose destination...
+            Port = choose_destination(Flow),
+            Actions = case Port of
+                          none -> [];
+                          %%    X when is_integer(X) ->
+                          %% [#ofp_action_enqueue{port = X, queue_id = 0}];
+                          X ->
+                              [#ofp_action_output{port = X, max_len = 0}]
+                      end,
 
-	    if
-		Port =:= flood ->
-		    %% We don't know that MAC, or we don't set up flows.  Send along the
-		    %% packet without setting up a flow.
-		    flower_datapath:send_packet(Sw, Msg#ofp_packet_in.buffer_id, Msg#ofp_packet_in.data, Actions, Msg#ofp_packet_in.in_port);
-		true ->
-		    %% The output port is known, so add a new flow.
-		    Match = flower_match:encode_ofp_matchflow([{nw_src_mask,32}, {nw_dst_mask,32}, tp_dst, tp_src, nw_proto, dl_type], Flow),
-		    ?DEBUG("Match: ~p~n", [Match]),
+            if
+                Port =:= flood ->
+                    %% We don't know that MAC, or we don't set up flows.
+                    %% Send along the
+                    %% packet without setting up a flow.
+                    flower_datapath:send_packet(
+                      Sw, Msg#ofp_packet_in.buffer_id,
+                      Msg#ofp_packet_in.data,
+                      Actions, Msg#ofp_packet_in.in_port);
+                true ->
+                    %% The output port is known, so add a new flow.
+                    Match = flower_match:encode_ofp_matchflow(
+                              [{nw_src_mask,32}, {nw_dst_mask,32}, tp_dst,
+                               tp_src, nw_proto, dl_type], Flow),
+                    ?DEBUG("Match: ~p~n", [Match]),
 
-		    flower_datapath:install_flow(Sw, Match, 0, 60, 0, Actions, Msg#ofp_packet_in.buffer_id, 0, Msg#ofp_packet_in.in_port, Msg#ofp_packet_in.data)
-	    end;
-	_ ->
-	    ?DEBUG("no match: ~p~n", [Flow])
+                    flower_datapath:install_flow(
+                      Sw, Match, 0, 60, 0, Actions,
+                      Msg#ofp_packet_in.buffer_id, 0,
+                      Msg#ofp_packet_in.in_port, Msg#ofp_packet_in.data)
+            end;
+        _ ->
+            ?DEBUG("no match: ~p~n", [Flow])
     end,
     {noreply, State};
 
@@ -176,38 +186,40 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-choose_destination(#flow{in_port = Port, dl_src = DlSrc, dl_dst = DlDst} = _Flow) ->
+choose_destination(#flow{in_port = Port, dl_src = DlSrc,
+                         dl_dst = DlDst} = _Flow) ->
     OutPort = case flower_mac_learning:eth_addr_is_reserved(DlSrc) of
-		  % Always use VLan = 0 to implement Shared VLAN Learning
-		  false -> learn_mac(DlSrc, 0, Port),
-			   find_out_port(DlDst, 0, Port);
-		  true -> none
-	      end,
+                  % Always use VLan = 0 to implement Shared VLAN Learning
+                  false -> learn_mac(DlSrc, 0, Port),
+                           find_out_port(DlDst, 0, Port);
+                  true -> none
+              end,
     ?DEBUG("Verdict: ~p", [OutPort]),
     OutPort.
 
-learn_mac(DlSrc, VLan, Port) ->		 
+learn_mac(DlSrc, VLan, Port) ->
     R = case flower_mac_learning:may_learn(DlSrc, VLan) of
-	    true -> flower_mac_learning:insert(DlSrc, VLan, Port);
-	    false ->
-		not_learned
-	end,
+            true -> flower_mac_learning:insert(DlSrc, VLan, Port);
+            false ->
+                not_learned
+        end,
     if
-	R =:= new; R =:= updated ->
-            ?DEBUG("~p: learned that ~s is on port ~w", [self(), flower_tools:format_mac(DlSrc), Port]),
-	    ok;
-	true ->
-	    ok
+        R =:= new; R =:= updated ->
+            ?DEBUG("~p: learned that ~s is on port ~w",
+                   [self(), flower_tools:format_mac(DlSrc), Port]),
+            ok;
+        true ->
+            ok
     end.
 
 find_out_port(DlDst, VLan, Port) ->
     OutPort = case flower_mac_learning:lookup(DlDst, VLan) of
-		  none -> flood;
-		  {ok, OutPort1} -> 
-		      if
-			  %% Don't send a packet back out its input port.
-			  OutPort1 =:= Port -> none;
-			  true -> OutPort1
-		      end
-	      end,
+                  none -> flood;
+                  {ok, OutPort1} ->
+                      if
+                          %% Don't send a packet back out its input port.
+                          OutPort1 =:= Port -> none;
+                          true -> OutPort1
+                      end
+              end,
     OutPort.

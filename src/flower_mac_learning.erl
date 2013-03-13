@@ -24,20 +24,20 @@
 
 %% API
 -export([start_link/0, insert/2, insert/3, lookup/1, lookup/2,
-	 expire/0, may_learn/1, may_learn/2, eth_addr_is_reserved/1,
-	 dump/0]).
+         expire/0, may_learn/1, may_learn/2, eth_addr_is_reserved/1,
+         dump/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 -define(MAC_ENTRY_IDLE_TIME, 60).
 
 -record(state, {
-	  timer,
-	  lru
-	 }).
+          timer,
+          lru
+         }).
 
 %%%===================================================================
 %%% API
@@ -84,9 +84,12 @@ may_learn(<<_:7, BCast:1, _/binary>> = _MAC, _VLan) ->
 %% 01-00-0C-CC-CC-CC  0x0802      CDP (Cisco Discovery Protocol),
 %%                                VTP (VLAN Trunking Protocol)
 %% 01-00-0C-CC-CC-CD  0x0802      Cisco Shared Spanning Tree Protocol Address
-%% 01-80-C2-00-00-00  0x0802      Spanning Tree Protocol (for bridges) IEEE 802.1D
-%% 01-80-C2-00-00-08  0x0802      Spanning Tree Protocol (for provider bridges) IEEE 802.1AD
-%% 01-80-C2-00-00-02  0x8809      Ethernet OAM Protocol IEEE 802.3ah (A.K.A. "slow protocols")
+%% 01-80-C2-00-00-00  0x0802      Spanning Tree Protocol
+%% (for bridges) IEEE 802.1D
+%% 01-80-C2-00-00-08  0x0802      Spanning Tree Protocol
+%% (for provider bridges) IEEE 802.1AD
+%% 01-80-C2-00-00-02  0x8809      Ethernet OAM Protocol IEEE 802.3ah
+%% (A.K.A. "slow protocols")
 %% 01-00-5E-xx-xx-xx  0x0800      IPv4 Multicast (RFC 1112)
 %% 33-33-xx-xx-xx-xx  0x86DD      IPv6 Multicast (RFC 2464)
 %%
@@ -137,17 +140,21 @@ init([]) ->
 handle_call({insert, MAC, VLan, Port}, _From, #state{lru = LRU} = State) ->
     {Result, LRU0} =  lrulist:get({MAC, VLan}, LRU),
     {Reply, LRU1} = case Result of
-			none ->
-			    {ok, NewLRU} = lrulist:insert({MAC, VLan}, Port, LRU0, [{slidingexpire, ?MAC_ENTRY_IDLE_TIME}]),
-			    {new, NewLRU};
-			{ok, Data} ->
-			    if (Data =/= Port) ->
-				    {ok, NewLRU} = lrulist:insert({MAC, VLan}, Port, LRU0, [{slidingexpire, ?MAC_ENTRY_IDLE_TIME}]),
-				    {updated, NewLRU};
-			       true ->
-				    {ok, LRU0}
-			    end
-		    end,
+                        none ->
+                            {ok, NewLRU} =
+                                lrulist:insert({MAC, VLan}, Port, LRU0,
+                                               [{slidingexpire,
+                                                 ?MAC_ENTRY_IDLE_TIME}]),
+                            {new, NewLRU};
+                        {ok, Data} when Data =/= Port ->
+                            {ok, NewLRU} =
+                                lrulist:insert({MAC, VLan}, Port, LRU0,
+                                               [{slidingexpire,
+                                                 ?MAC_ENTRY_IDLE_TIME}]),
+                            {updated, NewLRU};
+                        {ok, _Data} ->
+                            {ok, LRU0}
+                    end,
     {reply, Reply, State#state{lru = LRU1}};
 
 handle_call({lookup, MAC, VLan}, _From, #state{lru = LRU} = State) ->

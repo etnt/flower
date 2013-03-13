@@ -33,23 +33,24 @@
 -export([start_link/2]).
 
 %% gen_listener_tcp callbacks
--export([init/1, handle_accept/2, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([init/1, handle_accept/2, handle_call/3, handle_cast/2,
+         handle_info/2, terminate/2, code_change/3]).
 
 -define(TCP_CLIENT_OPTS, [binary, inet,
-			  {active,       false},
-			  {send_timeout, 5000},
-			  {nodelay,      true},
-			  {packet,       raw},
-			  {reuseaddr,    true}]).
+                          {active,       false},
+                          {send_timeout, 5000},
+                          {nodelay,      true},
+                          {packet,       raw},
+                          {reuseaddr,    true}]).
 
 -define(TCP_SERVER_OPTS, [binary, inet,
-			  {ip,           {0,0,0,0}},
-			  {active,       false},
-			  {send_timeout, 5000},
-			  {backlog,      10},
-			  {nodelay,      true},
-			  {packet,       raw},
-			  {reuseaddr,    true}]).
+                          {ip,           {0,0,0,0}},
+                          {active,       false},
+                          {send_timeout, 5000},
+                          {backlog,      10},
+                          {nodelay,      true},
+                          {packet,       raw},
+                          {reuseaddr,    true}]).
 
 %%%===================================================================
 %%% API
@@ -89,19 +90,21 @@ send(Socket, Packet) ->
 %%%===================================================================
 
 start_link(Port, Options) ->
-    gen_listener_tcp:start_link({local, ?MODULE}, ?MODULE, {Port, Options}, [{debug,[trace]}]).
+    gen_listener_tcp:start_link({local, ?MODULE}, ?MODULE,
+                                {Port, Options}, [{debug,[trace]}]).
 
 init({Port, Options}) ->
-    {ok, {Port, lists:merge(lists:sort(Options), lists:sort(?TCP_SERVER_OPTS))}, nil}.
+    {ok, {Port, lists:merge(lists:sort(Options),
+                            lists:sort(?TCP_SERVER_OPTS))}, nil}.
 
 handle_accept(Sock, State) ->
     case flower_datapath:start_connection(?MODULE) of
-	{ok, Pid} ->
-	    ok = gen_tcp:controlling_process(Sock, Pid),
-	    flower_datapath:accept(Pid, Sock);
-	_ ->
-	    error_logger:error_report([{event, accept_failed}]),
-	    gen_tcp:close(Sock)
+        {ok, Pid} ->
+            ok = gen_tcp:controlling_process(Sock, Pid),
+            flower_datapath:accept(Pid, Sock);
+        _ ->
+            error_logger:error_report([{event, accept_failed}]),
+            gen_tcp:close(Sock)
     end,
     {noreply, State}.
 

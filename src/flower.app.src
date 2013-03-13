@@ -6,7 +6,7 @@
   {applications, [
                   kernel,
                   stdlib,
-		  regine,
+                  regine,
                   gen_listener_tcp
                  ]},
   {mod, { flower_app, []}},

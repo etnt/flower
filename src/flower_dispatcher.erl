@@ -27,12 +27,13 @@
 -export([delete/1, join/1, leave/1, dispatch/3]).
 
 %% regine_server callbacks
--export([init/1, handle_register/4, handle_unregister/3, handle_pid_remove/3, handle_death/3, terminate/2]).
+-export([init/1, handle_register/4, handle_unregister/3,
+         handle_pid_remove/3, handle_death/3, terminate/2]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
 -record(state, {
-	 }).
+         }).
 
 %%%===================================================================
 %%% API
@@ -53,8 +54,8 @@ delete(Event) ->
 dispatch(Event, Sw, Msg) ->
     Handlers = ets:lookup(?SERVER, Event),
     lists:foreach(fun({_Ev, Pid}) ->
-			  gen_server:cast(Pid, {Event, Sw, Msg})
-		  end, Handlers).
+                          gen_server:cast(Pid, {Event, Sw, Msg})
+                  end, Handlers).
 
 %%%===================================================================
 %%% regine_server functions
@@ -96,11 +97,11 @@ do_join(Events, Pid) when is_list(Events) ->
     [do_join(Event, Pid) || Event <- Events];
 do_join(Event, Pid) ->
     case flower_event:is_registered(Event) of
-	true ->
-	    ets:insert(?SERVER, {Event, Pid}),
-	    [Pid];
-	false ->
-	    {error, invalid}
+        true ->
+            ets:insert(?SERVER, {Event, Pid}),
+            [Pid];
+        false ->
+            {error, invalid}
     end.
 
 do_leave(Events, Pid) when is_list(Events) ->

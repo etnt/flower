@@ -53,7 +53,7 @@
 -spec ofp_matchflow(atom(), ofp_match(), flow()) -> ofp_match().
 ofp_matchflow(in_port, Match, Flow) ->
     ofp_match({in_port, Flow#flow.in_port}, Match);
-ofp_matchflow({vlan_tci, none}, Match, #flow{vlan_tci = VLanTag} = _Flow) 
+ofp_matchflow({vlan_tci, none}, Match, #flow{vlan_tci = VLanTag} = _Flow)
   when VLanTag == undefined ->
     ofp_match({vlan_tci, none}, Match);
 ofp_matchflow({vlan_tci, VLanMatch}, Match, #flow{vlan_tci = TCI} = _Flow) ->
@@ -79,60 +79,86 @@ ofp_matchflow({nw_dst_mask, Mask}, Match, Flow) ->
 
 -spec encode_ofp_matchflow(list(term()), flow()) -> ofp_match().
 encode_ofp_matchflow(MatchSpec, Flow) ->
-    lists:foldl(fun(MatchRule, Match) -> ofp_matchflow(MatchRule, Match, Flow) end, #ofp_match{wildcards = ?OFPFW_ALL}, MatchSpec).
+    lists:foldl(fun(MatchRule, Match) ->
+                        ofp_matchflow(MatchRule, Match, Flow) end,
+                #ofp_match{wildcards = ?OFPFW_ALL}, MatchSpec).
 
 ofp_vlan_match(#ofp_match{wildcards = Wildcards} = Match, vid, DlVID)  ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_VLAN), dl_vlan = DlVID};
+    Match#ofp_match{
+      wildcards = Wildcards band (bnot ?OFPFW_DL_VLAN), dl_vlan = DlVID};
 ofp_vlan_match(#ofp_match{wildcards = Wildcards} = Match, pcp, DlPCP) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_VLAN_PCP), dl_vlan_pcp = DlPCP};
-ofp_vlan_match(#ofp_match{wildcards = Wildcards} = Match, both, {DlPCP, DlVID}) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot (?OFPFW_DL_VLAN bor ?OFPFW_DL_VLAN_PCP)), dl_vlan = DlVID, dl_vlan_pcp = DlPCP}.
+    Match#ofp_match{
+      wildcards = Wildcards band (bnot ?OFPFW_DL_VLAN_PCP),
+      dl_vlan_pcp = DlPCP};
+ofp_vlan_match(#ofp_match{wildcards = Wildcards} = Match,
+               both, {DlPCP, DlVID}) ->
+    Match#ofp_match{
+      wildcards = Wildcards band (bnot (?OFPFW_DL_VLAN bor ?OFPFW_DL_VLAN_PCP)),
+      dl_vlan = DlVID, dl_vlan_pcp = DlPCP}.
 
 -spec ofp_match(term(), ofp_match()) -> ofp_match().
 ofp_match({_, undefined}, Match) ->
     Match;
 ofp_match({in_port, InPort}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_IN_PORT), in_port = InPort};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_IN_PORT),
+                    in_port = InPort};
 ofp_match({vlan_tci, none}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot (?OFPFW_DL_VLAN bor ?OFPFW_DL_VLAN_PCP)), dl_vlan = ?OFP_VLAN_NONE};
+    Match#ofp_match{
+      wildcards = Wildcards band (bnot (?OFPFW_DL_VLAN bor ?OFPFW_DL_VLAN_PCP)),
+      dl_vlan = ?OFP_VLAN_NONE};
 ofp_match({vlan_tci, VLanMatch, TCI}, #ofp_match{} = Match) ->
     ofp_vlan_match(Match, VLanMatch, TCI);
 ofp_match({dl_src, DlSrc}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_SRC), dl_src = DlSrc};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_SRC),
+                    dl_src = DlSrc};
 ofp_match({dl_dst, DlDst}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_DST), dl_dst = DlDst};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_DST),
+                    dl_dst = DlDst};
 ofp_match({dl_type, DlType}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_TYPE), dl_type = DlType};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_DL_TYPE),
+                    dl_type = DlType};
 ofp_match({nw_proto, NwProto}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_NW_PROTO), nw_proto = NwProto};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_NW_PROTO),
+                    nw_proto = NwProto};
 ofp_match({tp_src, TpSrc}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_TP_SRC), tp_src = TpSrc};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_TP_SRC),
+                    tp_src = TpSrc};
 ofp_match({tp_dst, TpDst}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_TP_DST), tp_dst = TpDst};
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_TP_DST),
+                    tp_dst = TpDst};
 ofp_match({nw_tos, NwTos}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_NW_TOS), nw_tos = NwTos};
-ofp_match({nw_src_mask, NwSrc, Mask}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = (Wildcards band bnot ?OFPFW_NW_SRC_MASK) bor ((Mask band 16#3F) bsl 8), nw_src = NwSrc};
-ofp_match({nw_dst_mask, NwDst, Mask}, #ofp_match{wildcards = Wildcards} = Match) ->
-    Match#ofp_match{wildcards = (Wildcards band bnot ?OFPFW_NW_DST_MASK) bor ((Mask band 16#3F) bsl 14), nw_dst = NwDst}.
+    Match#ofp_match{wildcards = Wildcards band (bnot ?OFPFW_NW_TOS),
+                    nw_tos = NwTos};
+ofp_match({nw_src_mask, NwSrc, Mask},
+          #ofp_match{wildcards = Wildcards} = Match) ->
+    Match#ofp_match{
+      wildcards = (Wildcards band bnot ?OFPFW_NW_SRC_MASK) bor
+          ((Mask band 16#3F) bsl 8), nw_src = NwSrc};
+ofp_match({nw_dst_mask, NwDst, Mask},
+          #ofp_match{wildcards = Wildcards} = Match) ->
+    Match#ofp_match{wildcards = (Wildcards band bnot ?OFPFW_NW_DST_MASK) bor
+                        ((Mask band 16#3F) bsl 14), nw_dst = NwDst}.
 
 -spec encode_ofp_match(list(term())) -> ofp_match().
 encode_ofp_match(MatchSpec) ->
-    lists:foldl(fun(MatchRule, Match) -> ofp_match(MatchRule, Match) end, #ofp_match{wildcards = ?OFPFW_ALL}, MatchSpec).
+    lists:foldl(
+      fun(MatchRule, Match) -> ofp_match(MatchRule, Match) end,
+      #ofp_match{wildcards = ?OFPFW_ALL}, MatchSpec).
 
 dec_ofp_match(in_port, Match, MatchSpec) ->
     [{in_port, Match#ofp_match.in_port}|MatchSpec];
 dec_ofp_match(vlan_tci, #ofp_match{wildcards = Wildcards} = Match, MatchSpec) ->
     Spec = case (Wildcards band ?OFPFW_VLAN_TCI) of
-	       ?OFPFW_VLAN_TCI ->
-		   {both, {Match#ofp_match.dl_vlan_pcp, Match#ofp_match.dl_vlan}};
-	       ?OFPFW_DL_VLAN_PCP ->
-		   {pcp, Match#ofp_match.dl_vlan_pcp};
-	       ?OFPFW_DL_VLAN ->
-		   {vid, Match#ofp_match.dl_vlan};
-	       _ ->
-		   none
-	   end,
+               ?OFPFW_VLAN_TCI ->
+                   {both, {Match#ofp_match.dl_vlan_pcp,
+                           Match#ofp_match.dl_vlan}};
+               ?OFPFW_DL_VLAN_PCP ->
+                   {pcp, Match#ofp_match.dl_vlan_pcp};
+               ?OFPFW_DL_VLAN ->
+                   {vid, Match#ofp_match.dl_vlan};
+               _ ->
+                   none
+           end,
     [{vlan_tci, Spec}|MatchSpec];
 dec_ofp_match(dl_src, Match, MatchSpec) ->
     [{dl_src, Match#ofp_match.dl_src}|MatchSpec];
@@ -149,16 +175,19 @@ dec_ofp_match(tp_dst, Match, MatchSpec) ->
 dec_ofp_match(nw_tos, Match, MatchSpec) ->
     [{nw_tos, Match#ofp_match.nw_tos}|MatchSpec];
 dec_ofp_match(nw_src_mask, Match, MatchSpec) ->
-    [{nw_src_mask, Match#ofp_match.nw_src}, 32 - (Match#ofp_match.wildcards bsr  8) band 16#3F|MatchSpec];
+    [{nw_src_mask, Match#ofp_match.nw_src},
+     32 - (Match#ofp_match.wildcards bsr  8) band 16#3F|MatchSpec];
 dec_ofp_match(nw_dst_mask, Match, MatchSpec) ->
-    [{nw_dst_mask, Match#ofp_match.nw_dst, 32 - (Match#ofp_match.wildcards bsr 14) band 16#3F}|MatchSpec].
+    [{nw_dst_mask, Match#ofp_match.nw_dst,
+      32 - (Match#ofp_match.wildcards bsr 14) band 16#3F}|MatchSpec].
 
-dec_ofp_match_fun({Prop, Bits}, #ofp_match{wildcards = Wildcards} = Match, MatchSpec) ->
+dec_ofp_match_fun({Prop, Bits}, #ofp_match{wildcards = Wildcards} = Match,
+                  MatchSpec) ->
     if
-	(Wildcards band Bits) =/= Bits ->
-	    dec_ofp_match(Prop, Match, MatchSpec);
-	true ->
-	    MatchSpec
+        (Wildcards band Bits) =/= Bits ->
+            dec_ofp_match(Prop, Match, MatchSpec);
+        true ->
+            MatchSpec
     end.
 
 ofp_match_matches() ->
@@ -175,4 +204,6 @@ ofp_match_matches() ->
      {nw_tos, ?OFPFW_NW_TOS}].
 
 decode_ofp_match(#ofp_match{} = Match) ->
-    lists:foldl(fun(Field, MatchSpec) -> dec_ofp_match_fun(Field, Match, MatchSpec) end, [], ofp_match_matches()).
+    lists:foldl(
+      fun(Field, MatchSpec) -> dec_ofp_match_fun(Field, Match, MatchSpec) end,
+      [], ofp_match_matches()).
